@@ -1,0 +1,9 @@
+.vscode
+checker/*
+create_archive.sh
+*_out
+*_err
+*.txt
+*.o
+hosts_output/*
+
