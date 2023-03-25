@@ -5,9 +5,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "queue.h"
 
 #define MAX_PACKET_LEN 1600
 #define ROUTER_NUM_INTERFACES 3
+#define ARP_TABLE_LEN 100
 
 int send_to_link(int interface, char *frame_data, size_t length);
 
@@ -34,6 +36,14 @@ struct route_table_entry {
 struct arp_entry {
     uint32_t ip;
     uint8_t mac[6];
+};
+
+struct router {
+	struct route_table_entry *rtable;
+	struct arp_entry *arp_table;
+	uint32_t rtable_len;
+	uint16_t arp_table_len;
+	queue waiting_list;
 };
 
 char *get_interface_ip(int interface);

@@ -20,10 +20,30 @@
 	 	mac_addr[4] == 255 &&	\
 	 	mac_addr[5] == 255)
 
+#define GET_ETHR_HDR(packet) \
+	(struct ether_header *) packet
+
 #define GET_IP_HDR(packet) \
 	(struct iphdr *)(packet + sizeof(struct ether_header))
 
 #define GET_ARP_HDR(packet) \
 	(struct arp_header *)(packet + sizeof(struct ether_header))
+
+
+/*
+	@brief Initializes internal router structs and loads the routing table
+	@param rtable the file where the routing table is found 
+	@return 0 on success, -1 if it fails
+*/
+int router_init(char *rtable);
+
+/*
+ 	@brief returns the best route for the packet, or NULL if there
+ 	is no matching route.
+*/
+struct route_table_entry *get_best_route(uint32_t ip_dest);
+struct arp_entry *get_arp_entry(uint32_t given_ip);
+
+void handle_ipv4_packet(char *packet, size_t len);
 
 #endif
