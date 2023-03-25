@@ -5,20 +5,20 @@
 struct arp_header {
 	uint16_t htype;   /* Format of hardware address */
 	uint16_t ptype;   /* Format of protocol address */
-	uint8_t hlen;    /* Length of hardware address */
-	uint8_t plen;    /* Length of protocol address */
-	uint16_t op;    /* ARP opcode (command) */
-	uint8_t sha[6];  /* Sender hardware address */
-	uint32_t spa;   /* Sender IP address */
-	uint8_t tha[6];  /* Target hardware address */
-	uint32_t tpa;   /* Target IP address */
+	uint8_t hlen;     /* Length of hardware address */
+	uint8_t plen;     /* Length of protocol address */
+	uint16_t op;      /* ARP opcode (command) */
+	uint8_t sha[6];   /* Sender hardware address */
+	uint32_t spa;     /* Sender IP address */
+	uint8_t tha[6];   /* Target hardware address */
+	uint32_t tpa;     /* Target IP address */
 } __attribute__((packed));
 
 /* Ethernet frame header*/
 struct  ether_header {
-    uint8_t  ether_dhost[6]; //adresa mac destinatie
-    uint8_t  ether_shost[6]; //adresa mac sursa
-    uint16_t ether_type;     // identificator protocol encapsulat
+    uint8_t  ether_dhost[6];  // adresa mac destinatie
+    uint8_t  ether_shost[6];  // adresa mac sursa
+    uint16_t ether_type;      // identificator protocol encapsulat
 };
 
 /* IP Header */
@@ -49,7 +49,7 @@ struct icmphdr
       uint16_t        id;
       uint16_t        sequence;
     } echo;                        /* echo datagram */
-    uint32_t        gateway;        /* gateway address */
+    uint32_t        gateway;       /* gateway address */
     struct
     {
       uint16_t        __unused;

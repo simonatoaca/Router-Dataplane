@@ -37,18 +37,24 @@ int main(int argc, char *argv[])
 
 		printf("Ethernet dest: %02x:%02x:%02x:%02x:%02x:%02x\n", \
 			eth_hdr->ether_dhost[0], eth_hdr->ether_dhost[1], \
-			eth_hdr->ether_dhost[2], eth_hdr->ether_dhost[3], eth_hdr->ether_dhost[4], eth_hdr->ether_dhost[5]);
+			eth_hdr->ether_dhost[2], eth_hdr->ether_dhost[3],
+			eth_hdr->ether_dhost[4], eth_hdr->ether_dhost[5]);
 
 		/* Check if the packet is for this device */
 		if (!MAC_ADDR_EQ(eth_hdr->ether_dhost, mac_addr) &&
 			!IS_BROADCAST(eth_hdr->ether_dhost)) {
-			printf("The packet has another destination\n");
+			printf("The packet has another destination\n\n");
 			continue;
 		}
 
 		/* Check if it is an IPv4 packet */
 		if (eth_hdr->ether_type == ntohs(ETHERTYPE_IP)) {
 			printf("Received an IPv4 packet on interface %d\n", interface);
+
+			/*
+				TREBUIE VERIFICAT DACA ROUTERUL E DESTINATIA -> ICMP DACA NU E
+			*/
+
 			handle_ipv4_packet(packet, len);
 			continue;
 		} 
@@ -57,7 +63,7 @@ int main(int argc, char *argv[])
 		if (eth_hdr->ether_type == ntohs(ETHERTYPE_ARP)) {
 			printf("Received an ARP packet on interface %d\n", interface);
 
-			struct arp_header *arp_hdr = GET_ARP_HDR(packet);
+			handle_arp_packet(packet, len, interface);
 			continue;
 		}
 	}
