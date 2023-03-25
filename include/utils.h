@@ -5,6 +5,8 @@
 #define ETHERTYPE_ARP 0x0806
 
 #define BROADCAST_MAC {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+#define MAC_ADDR_SIZE 6 * sizeof(uint8_t)
+
 #define ARP_REQUEST_CODE 1
 #define ARP_REPLY_CODE 2
 
@@ -34,23 +36,27 @@
 	(struct arp_header *)(packet + sizeof(struct ether_header))
 
 #define ETH_HDR_ARP_REQ() (struct ether_header) {				\
-	.ether_dhost = BROADCAST_MAC,					\
-	.ether_shost = {0},						\
-	.ether_type = htons(ETHERTYPE_ARP)					\
+	.ether_dhost = BROADCAST_MAC,								\
+	.ether_shost = {0},											\
+	.ether_type = htons(ETHERTYPE_ARP)							\
 }
 
 #define ARP_REQ_HDR(source_ip, dest_ip) (struct arp_header) {	\
 		.htype = htons(1),										\
 		.ptype = htons(ETHERTYPE_IP), 							\
-		.hlen = 6, 										\
-		.plen = 4,										\
-		.op = htons(ARP_REQUEST_CODE), 										\
-		.sha = {0}, 							\
-		.spa = source_ip, 								\
-		.tha = {0}, 									\
-		.tpa = dest_ip									\
+		.hlen = 6, 												\
+		.plen = 4,												\
+		.op = htons(ARP_REQUEST_CODE), 							\
+		.sha = {0}, 											\
+		.spa = source_ip, 										\
+		.tha = {0}, 											\
+		.tpa = dest_ip											\
 }
 
+struct waiting_packet {
+	char packet[MAX_PACKET_LEN];
+	size_t len;
+};
 
 /*
 	@brief Initializes internal router structs and loads the routing table

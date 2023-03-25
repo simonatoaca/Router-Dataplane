@@ -47,6 +47,10 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
+		if (MAC_ADDR_EQ(eth_hdr->ether_dhost, eth_hdr->ether_shost)) {
+			continue;
+		}
+
 		/* Check if it is an IPv4 packet */
 		if (eth_hdr->ether_type == ntohs(ETHERTYPE_IP)) {
 			printf("Received an IPv4 packet on interface %d\n", interface);
