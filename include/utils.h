@@ -66,13 +66,6 @@ struct w_packet {
 */
 int router_init(char *rtable);
 
-/*
- 	@brief returns the best route for the packet, or NULL if there
- 	is no matching route.
-*/
-struct route_table_entry *get_best_route(uint32_t ip_dest);
-struct arp_entry *get_arp_entry(uint32_t given_ip);
-
 void handle_ipv4_packet(char *packet, size_t len);
 void handle_arp_packet(char *packet, size_t len, int interface);
 
