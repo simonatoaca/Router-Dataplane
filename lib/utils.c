@@ -63,6 +63,39 @@ struct arp_entry *search_arp_entry(uint32_t given_ip) {
 	return NULL;
 }
 
+void enqueue_packet(char *packet, size_t len, uint32_t next_hop)
+{
+	struct w_packet *aux_packet = malloc(sizeof(struct w_packet));
+
+	memcpy(aux_packet->packet, packet, MAX_PACKET_LEN);
+	aux_packet->len = len;
+	aux_packet->next_hop = next_hop;
+	queue_enq(router.waiting_list, aux_packet);
+}
+
+void send_arp_request(struct route_table_entry *route, struct ether_header *eth_hdr)
+{
+	/* Get interface ip */
+	struct in_addr ip_addr;
+	inet_aton(get_interface_ip(route->interface), &ip_addr);
+	uint32_t ip = ip_addr.s_addr;
+
+	/* Populate ARP request packet */
+	struct ether_header eth_arp_hdr = ETH_HDR_ARP_REQ();
+	memcpy(eth_arp_hdr.ether_shost, eth_hdr->ether_shost, MAC_ADDR_SIZE);
+
+	struct arp_header arp_hdr = ARP_REQ_HDR(ip, route->next_hop);
+	memcpy(arp_hdr.sha, eth_hdr->ether_shost, MAC_ADDR_SIZE);
+
+	char arp_request[MAX_PACKET_LEN];
+	memcpy(arp_request, &eth_arp_hdr, sizeof(struct ether_header));
+	memcpy(arp_request + sizeof(struct ether_header), &arp_hdr, sizeof(struct arp_header));
+
+	printf("Send ARP REQUEST on interface %d\n", route->interface);
+	int arp_req_len = sizeof(struct ether_header) + sizeof(struct arp_header);
+	send_to_link(route->interface, arp_request, arp_req_len);
+}
+
 void handle_ipv4_packet(char *packet, size_t len)
 {	
 	struct ether_header *eth_hdr = GET_ETHR_HDR(packet);
@@ -78,6 +111,7 @@ void handle_ipv4_packet(char *packet, size_t len)
 	struct route_table_entry *route = get_best_route(ip_hdr->daddr);
 
 	if (!route) {
+		/* AICI TRB RASPUNS ICMP */
 		printf("No route found for the packet\n");
 		return;
 	}
@@ -104,31 +138,9 @@ void handle_ipv4_packet(char *packet, size_t len)
 	if (!arp_entry) {
 		printf("The ip addr was not in the ARP table\n");
 
-		struct waiting_packet *aux_packet = malloc(sizeof(struct waiting_packet));
+		enqueue_packet(packet, len, route->next_hop);
 
-		memcpy(aux_packet->packet, packet, MAX_PACKET_LEN);
-		aux_packet->len = len;
-		queue_enq(router.waiting_list, aux_packet);
-
-		/* Get interface ip */
-		struct in_addr ip_addr;
-		inet_aton(get_interface_ip(route->interface), &ip_addr);
-		uint32_t ip = ip_addr.s_addr;
-
-		/* Populate ARP request packet */
-		struct ether_header eth_arp_hdr = ETH_HDR_ARP_REQ();
-		memcpy(eth_arp_hdr.ether_shost, eth_hdr->ether_shost, MAC_ADDR_SIZE);
-
-		struct arp_header arp_hdr = ARP_REQ_HDR(ip, route->next_hop);
-		memcpy(arp_hdr.sha, eth_hdr->ether_shost, 6 * sizeof(uint8_t));
-
-		char arp_request[MAX_PACKET_LEN];
-		memcpy(arp_request, &eth_arp_hdr, sizeof(struct ether_header));
-		memcpy(arp_request + sizeof(struct ether_header), &arp_hdr, sizeof(struct arp_header));
-
-		printf("Send ARP REQUEST on interface %d\n", route->interface);
-		int arp_req_len = sizeof(struct ether_header) + sizeof(struct arp_header);
-		send_to_link(route->interface, arp_request, arp_req_len);
+		send_arp_request(route, eth_hdr);
 		return;
 	}
 
@@ -162,7 +174,9 @@ void handle_arp_packet(char *packet, size_t len, int interface)
 			arp_hdr->spa = ip;
 
 			/* Update ethernet addresses */
-			uint8_t *mac_addr = eth_hdr->ether_shost;
+			uint8_t mac_addr[6];
+			memcpy(mac_addr, eth_hdr->ether_shost, MAC_ADDR_SIZE);
+
 			get_interface_mac(interface, eth_hdr->ether_shost);
 			memcpy(arp_hdr->sha, eth_hdr->ether_shost, MAC_ADDR_SIZE);
 			memcpy(eth_hdr->ether_dhost, mac_addr, MAC_ADDR_SIZE);
@@ -175,7 +189,7 @@ void handle_arp_packet(char *packet, size_t len, int interface)
 	}
 
 	if (arp_hdr->op == ntohs(ARP_REPLY_CODE)) {
-		printf("Got an ARP reply on interface %d\n\n", interface);
+		printf("Got an ARP reply on interface %d\n", interface);
 
 		struct arp_entry arp_entry;
 		memcpy(arp_entry.mac, arp_hdr->sha, MAC_ADDR_SIZE);
@@ -195,19 +209,21 @@ void handle_arp_packet(char *packet, size_t len, int interface)
 			return;
 		}
 
-		struct waiting_packet *waiting_packet = queue_deq(router.waiting_list);
+		struct w_packet *w_packet = queue_deq(router.waiting_list);
 
-		struct ether_header *eth_hdr_waiting = GET_ETHR_HDR(waiting_packet->packet);
-		struct iphdr *ip_hdr_waiting = GET_IP_HDR(waiting_packet->packet);
+		struct ether_header *eth_hdr_waiting = GET_ETHR_HDR(w_packet->packet);
 
-		if (ip_hdr_waiting->daddr == arp_hdr->spa) {
+		/* If the packet waited for this ip address mac, send it */
+		if (w_packet->next_hop == arp_hdr->spa) {
 			memcpy(eth_hdr_waiting->ether_dhost, arp_entry.mac, MAC_ADDR_SIZE);
 			
-			// Send packet - WHAT IS LEN ACTUALLY
-			send_to_link(interface, waiting_packet->packet, waiting_packet->len);
+			// Send packet
+			send_to_link(interface, w_packet->packet, w_packet->len);
 			printf("Sent waiting packet on interface %d\n\n", interface);
+		} else {
+			enqueue_packet(w_packet->packet, w_packet->len, w_packet->next_hop);
 		}
 
-		free(waiting_packet);
+		free(w_packet);
 	}
 }

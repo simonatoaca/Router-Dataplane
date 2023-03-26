@@ -53,8 +53,9 @@
 		.tpa = dest_ip											\
 }
 
-struct waiting_packet {
+struct w_packet {
 	char packet[MAX_PACKET_LEN];
+	uint32_t next_hop;
 	size_t len;
 };
 
