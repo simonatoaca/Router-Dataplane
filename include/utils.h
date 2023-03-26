@@ -10,6 +10,14 @@
 #define ARP_REQUEST_CODE 1
 #define ARP_REPLY_CODE 2
 
+#define ICMP_PROT 1
+
+/* ICMP TYPES */
+#define ICMP_REPLY 0
+#define ICMP_REQUEST 8
+#define ICMP_TIME_EXCEEDED 11
+#define ICMP_DEST_UNREACHABLE 3
+
 #define MAC_ADDR_EQ(mac_addr, compared_to) \
 	(mac_addr[0] == compared_to[0] &&	\
 		mac_addr[1] == compared_to[1] &&	\
@@ -34,6 +42,9 @@
 
 #define GET_ARP_HDR(packet) \
 	(struct arp_header *)(packet + sizeof(struct ether_header))
+
+#define GET_ICMP_HDR(packet) \
+	(struct icmphdr *)(packet + sizeof(struct ether_header) + sizeof(struct iphdr))
 
 #define ETH_HDR_ARP_REQ() (struct ether_header) {				\
 	.ether_dhost = BROADCAST_MAC,								\
@@ -66,7 +77,7 @@ struct w_packet {
 */
 int router_init(char *rtable);
 
-void handle_ipv4_packet(char *packet, size_t len);
+void handle_ipv4_packet(char *packet, size_t len, int interface);
 void handle_arp_packet(char *packet, size_t len, int interface);
 
 

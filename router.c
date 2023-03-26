@@ -55,11 +55,7 @@ int main(int argc, char *argv[])
 		if (eth_hdr->ether_type == ntohs(ETHERTYPE_IP)) {
 			printf("Received an IPv4 packet on interface %d\n", interface);
 
-			/*
-				TREBUIE VERIFICAT DACA ROUTERUL E DESTINATIA -> ICMP DACA NU E
-			*/
-
-			handle_ipv4_packet(packet, len);
+			handle_ipv4_packet(packet, len, interface);
 			continue;
 		} 
 		
