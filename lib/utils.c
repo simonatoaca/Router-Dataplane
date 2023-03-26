@@ -89,7 +89,6 @@ static void send_arp_request(struct route_table_entry *route, struct ether_heade
 	memcpy(arp_request, &eth_arp_hdr, sizeof(struct ether_header));
 	memcpy(arp_request + sizeof(struct ether_header), &arp_hdr, sizeof(struct arp_header));
 
-	printf("Send ARP REQUEST on interface %d\n", route->interface);
 	int arp_req_len = sizeof(struct ether_header) + sizeof(struct arp_header);
 	send_to_link(route->interface, arp_request, arp_req_len);
 }
@@ -116,17 +115,11 @@ static void send_arp_reply(char *packet, size_t len, uint32_t ip, int interface)
 	memcpy(eth_hdr->ether_dhost, mac_addr, MAC_ADDR_SIZE);
 
 	send_to_link(interface, packet, len);
-
-	printf("Sent ARP reply on interface: %d, with the MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n\n", \
-				interface, mac_addr[0], mac_addr[1], \
-				mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
 }
 
 static void send_waiting_packets(int interface, uint32_t recv_ip, uint8_t *recv_mac)
 {
-	/* Go through waiting packets */
 	if (queue_empty(router.waiting_list)) {
-		printf("No one was waiting for this ARP reply\n");
 		return;
 	}
 
@@ -143,7 +136,6 @@ static void send_waiting_packets(int interface, uint32_t recv_ip, uint8_t *recv_
 			memcpy(eth_hdr_waiting->ether_dhost, recv_mac, MAC_ADDR_SIZE);
 				
 			send_to_link(interface, w_packet->packet, w_packet->len);
-			printf("Sent waiting packet on interface %d\n\n", interface);
 			free(w_packet);
 			continue;
 		}
@@ -233,7 +225,6 @@ void handle_ipv4_packet(char *packet, size_t len, int interface)
 
 	/* Check ip_hdr integrity */
 	if (checksum((uint16_t *)ip_hdr, sizeof(struct iphdr))) {
-		printf("Corrupt packet\n");
 		return;
 	}
 
@@ -244,8 +235,6 @@ void handle_ipv4_packet(char *packet, size_t len, int interface)
 		struct icmphdr *icmp_hdr = GET_ICMP_HDR(packet);
 
 		if (icmp_hdr->type == ICMP_REQUEST) {
-			printf("Got a ping, man :)\n");
-
 			build_ping_reply(packet, len);
 		}
 	}
@@ -254,7 +243,6 @@ void handle_ipv4_packet(char *packet, size_t len, int interface)
 	struct route_table_entry *route = get_best_route(ip_hdr->daddr);
 
 	if (!route) {
-		printf("!route\n");
 		build_icmp_msg(packet, interface, &len, ip, ICMP_DEST_UNREACHABLE);
 
 		/* Find new route */
@@ -265,7 +253,6 @@ void handle_ipv4_packet(char *packet, size_t len, int interface)
 	ip_hdr->ttl--;
 
 	if (!ip_hdr->ttl) {
-		printf("!ttl\n");
 		build_icmp_msg(packet, interface, &len, ip, ICMP_TIME_EXCEEDED);
 
 		/* Find new route */
@@ -295,7 +282,6 @@ void handle_ipv4_packet(char *packet, size_t len, int interface)
 		  
 	/* Send packet */
 	send_to_link(route->interface, packet, len);
-	printf("\n");
 }
 
 void handle_arp_packet(char *packet, size_t len, int interface)
@@ -303,8 +289,6 @@ void handle_arp_packet(char *packet, size_t len, int interface)
 	struct arp_header *arp_hdr = GET_ARP_HDR(packet);
 
 	if (arp_hdr->op == ntohs(ARP_REQUEST_CODE)) {
-		printf("Got an ARP request on interface %d\n", interface);
-
 		/* Check if the request asks for the MAC of the router */
 		uint32_t ip = get_ip_from_interface(interface);
 
@@ -314,8 +298,6 @@ void handle_arp_packet(char *packet, size_t len, int interface)
 	}
 
 	if (arp_hdr->op == ntohs(ARP_REPLY_CODE)) {
-		printf("Got an ARP reply on interface %d\n", interface);
-
 		struct arp_entry arp_entry;
 		memcpy(arp_entry.mac, arp_hdr->sha, MAC_ADDR_SIZE);
 		arp_entry.ip = arp_hdr->spa;

@@ -67,6 +67,7 @@
 		.tpa = dest_ip											\
 }
 
+/* Struct used for storing the packets waiting for ARP reply */
 struct w_packet {
 	char packet[MAX_PACKET_LEN];
 	uint32_t next_hop;
