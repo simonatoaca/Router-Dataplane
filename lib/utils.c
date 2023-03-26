@@ -182,6 +182,43 @@ static void build_ping_reply(char *packet, int len)
 								len - sizeof(struct ether_header) - sizeof(struct iphdr)));
 }
 
+static void build_icmp_msg(char *packet, int interface, size_t *len, uint32_t ip, uint8_t error_type)
+{
+	struct ether_header *eth_hdr = GET_ETHR_HDR(packet);
+	struct iphdr *ip_hdr = GET_IP_HDR(packet);
+
+	/* Copy iphdr and 64 bytes at the end */
+	char payload[ICMP_PAYLOAD_SZ];
+	memcpy(payload, packet + sizeof(struct ether_header), ICMP_PAYLOAD_SZ);
+	memset(packet + sizeof(struct ether_header) + sizeof(struct iphdr), 0, sizeof(struct icmphdr));
+	memcpy(packet + sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct icmphdr),
+			payload, ICMP_PAYLOAD_SZ);
+
+	/* Set source and destination addresses */
+	memcpy(eth_hdr->ether_dhost, eth_hdr->ether_shost, MAC_ADDR_SIZE);
+	get_interface_mac(interface, eth_hdr->ether_shost);
+
+	ip_hdr->daddr = ip_hdr->saddr;
+	ip_hdr->saddr = ip;
+
+	ip_hdr->protocol = ICMP_PROT;
+
+	struct icmphdr *icmp_hdr = GET_ICMP_HDR(packet);
+
+	/* Update len */
+	(*len) += sizeof(struct icmphdr);
+	ip_hdr->tot_len += sizeof(struct icmphdr);
+
+	/* Change ICMP type to indicate the error */
+	icmp_hdr->type = error_type;
+	icmp_hdr->code = 0;
+
+	/* ICMP checksum */
+	icmp_hdr->checksum = 0;
+	icmp_hdr->checksum = htons(checksum((uint16_t *)icmp_hdr,
+							(*len) - sizeof(struct ether_header) - sizeof(struct iphdr)));
+}
+
 static uint32_t get_ip_from_interface(int interface)
 {
 	struct in_addr ip_addr;
@@ -217,19 +254,25 @@ void handle_ipv4_packet(char *packet, size_t len, int interface)
 	struct route_table_entry *route = get_best_route(ip_hdr->daddr);
 
 	if (!route) {
-		/* AICI TRB RASPUNS ICMP */
-		printf("No route found for the packet\n");
-		return;
-	}
+		printf("!route\n");
+		build_icmp_msg(packet, interface, &len, ip, ICMP_DEST_UNREACHABLE);
 
-	if (!ip_hdr->ttl) {
-		/* AICI TRB RASPUNS ICMP */
-		printf("TTL is 0\n");
-		return;
+		/* Find new route */
+		route = get_best_route(ip_hdr->daddr);
 	}
 
 	/* Update ttl */
 	ip_hdr->ttl--;
+
+	if (!ip_hdr->ttl) {
+		printf("!ttl\n");
+		build_icmp_msg(packet, interface, &len, ip, ICMP_TIME_EXCEEDED);
+
+		/* Find new route */
+		route = get_best_route(ip_hdr->daddr);
+	}
+
+
 	ip_hdr->check = 0;
 
 	/* Recompute the checksum */

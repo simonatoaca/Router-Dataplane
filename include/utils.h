@@ -6,11 +6,14 @@
 
 #define BROADCAST_MAC {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 #define MAC_ADDR_SIZE 6 * sizeof(uint8_t)
+#define ICMP_PAYLOAD_SZ sizeof(struct iphdr) + 64
 
 #define ARP_REQUEST_CODE 1
 #define ARP_REPLY_CODE 2
 
 #define ICMP_PROT 1
+
+#define ETHERNET_HTYPE 1
 
 /* ICMP TYPES */
 #define ICMP_REPLY 0
@@ -53,7 +56,7 @@
 }
 
 #define ARP_REQ_HDR(source_ip, dest_ip) (struct arp_header) {	\
-		.htype = htons(1),										\
+		.htype = htons(ETHERNET_HTYPE),										\
 		.ptype = htons(ETHERTYPE_IP), 							\
 		.hlen = 6, 												\
 		.plen = 4,												\
