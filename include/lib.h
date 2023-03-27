@@ -32,7 +32,7 @@ struct route_table_entry {
 	int interface;
 } __attribute__((packed));
 
-/* ARP table entry when skipping the ARP exercise */
+/* ARP table entry */
 struct arp_entry {
     uint32_t ip;
     uint8_t mac[6];

@@ -36,7 +36,7 @@ int router_init(char *rtable)
 	return 0;
 }
 
-static struct route_table_entry *get_best_route(uint32_t ip_dest) {
+struct route_table_entry *get_best_route(uint32_t ip_dest) {
 	struct route_table_entry *candidate = NULL;
 
 	for (int i = 0; i < router.rtable_len; i++) {
@@ -50,7 +50,7 @@ static struct route_table_entry *get_best_route(uint32_t ip_dest) {
 	return candidate;
 }
 
-static struct arp_entry *search_arp_entry(uint32_t given_ip) {
+struct arp_entry *search_arp_entry(uint32_t given_ip) {
 	for (int i = 0; i < router.arp_table_len; i++) {
 		if (router.arp_table[i].ip == given_ip) {
 			struct arp_entry *entry = &router.arp_table[i];
@@ -61,9 +61,10 @@ static struct arp_entry *search_arp_entry(uint32_t given_ip) {
 	return NULL;
 }
 
-static void enqueue_packet(char *packet, size_t len, uint32_t next_hop, queue q)
+void enqueue_packet(char *packet, size_t len, uint32_t next_hop, queue q)
 {
 	struct w_packet *aux_packet = malloc(sizeof(struct w_packet));
+	DIE(!aux_packet, "failed enqueuing the packet\n");
 
 	memcpy(aux_packet->packet, packet, MAX_PACKET_LEN);
 	aux_packet->len = len;
@@ -71,7 +72,7 @@ static void enqueue_packet(char *packet, size_t len, uint32_t next_hop, queue q)
 	queue_enq(q, aux_packet);
 }
 
-static void send_arp_request(struct route_table_entry *route, struct ether_header *eth_hdr)
+void send_arp_request(struct route_table_entry *route, struct ether_header *eth_hdr)
 {
 	/* Get interface ip */
 	struct in_addr ip_addr;
@@ -93,7 +94,7 @@ static void send_arp_request(struct route_table_entry *route, struct ether_heade
 	send_to_link(route->interface, arp_request, arp_req_len);
 }
 
-static void send_arp_reply(char *packet, size_t len, uint32_t ip, int interface)
+void send_arp_reply(char *packet, size_t len, uint32_t ip, int interface)
 {
 	struct ether_header *eth_hdr = GET_ETHR_HDR(packet);
 	struct arp_header *arp_hdr = GET_ARP_HDR(packet);
@@ -117,13 +118,15 @@ static void send_arp_reply(char *packet, size_t len, uint32_t ip, int interface)
 	send_to_link(interface, packet, len);
 }
 
-static void send_waiting_packets(int interface, uint32_t recv_ip, uint8_t *recv_mac)
+void send_waiting_packets(int interface, uint32_t recv_ip, uint8_t *recv_mac)
 {
 	if (queue_empty(router.waiting_list)) {
 		return;
 	}
 
 	queue temp_q = queue_create();
+
+	DIE(!temp_q, "failed allocating queue\n");
 
 	/* Send all packets that were waiting for this reply */
 	while (!queue_empty(router.waiting_list)) {
@@ -148,7 +151,7 @@ static void send_waiting_packets(int interface, uint32_t recv_ip, uint8_t *recv_
 	router.waiting_list = temp_q;
 }
 
-static void build_ping_reply(char *packet, int len)
+void build_ping_reply(char *packet, int len)
 {
 	struct ether_header *eth_hdr = GET_ETHR_HDR(packet);
 	struct iphdr *ip_hdr = GET_IP_HDR(packet);
@@ -174,7 +177,7 @@ static void build_ping_reply(char *packet, int len)
 								len - sizeof(struct ether_header) - sizeof(struct iphdr)));
 }
 
-static void build_icmp_msg(char *packet, int interface, size_t *len, uint32_t ip, uint8_t error_type)
+void build_icmp_msg(char *packet, int interface, size_t *len, uint32_t ip, uint8_t error_type)
 {
 	struct ether_header *eth_hdr = GET_ETHR_HDR(packet);
 	struct iphdr *ip_hdr = GET_IP_HDR(packet);
@@ -211,7 +214,7 @@ static void build_icmp_msg(char *packet, int interface, size_t *len, uint32_t ip
 							(*len) - sizeof(struct ether_header) - sizeof(struct iphdr)));
 }
 
-static uint32_t get_ip_from_interface(int interface)
+uint32_t get_ip_from_interface(int interface)
 {
 	struct in_addr ip_addr;
 	inet_aton(get_interface_ip(interface), &ip_addr);

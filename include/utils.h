@@ -1,6 +1,8 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
+#include "protocols.h"
+
 #define ETHERTYPE_IP 0x0800
 #define ETHERTYPE_ARP 0x0806
 
@@ -81,7 +83,92 @@ struct w_packet {
 */
 int router_init(char *rtable);
 
+/*
+	@brief finds the next hop for the ip destination
+	@param ip_dest the final destination of the packet
+	@return route_table_entry struct with the next hop ip and interface
+*/
+struct route_table_entry *get_best_route(uint32_t ip_dest);
+
+/*
+	@brief finds the mac address of the given ip in the arp table
+	@param given_ip the ip of the next hop
+	@return an arp_entry struct, or NULL when the given ip is not in the ARP table
+*/
+struct arp_entry *search_arp_entry(uint32_t given_ip);
+
+/*
+	@brief enqueues a packet in the waiting line of the router as a w_packet struct
+	@param packet the enqueued packet
+	@param len the length of the packet
+	@param next_hop the next_hop of the packet
+	@param q the queue - usually the router waiting line
+*/
+void enqueue_packet(char *packet, size_t len, uint32_t next_hop, queue q);
+
+/*
+	@brief sends an ARP request on route->interface,
+			asking for route->next_hop ip's MAC address
+	@param route a struct that contains info about the next hop
+	@param eth_hdr the ether header of the packet that waits for the MAC address
+*/
+void send_arp_request(struct route_table_entry *route, struct ether_header *eth_hdr);
+
+/*
+	@brief sends an ARP reply with the MAC address of the interface
+	@param packet the received ARP request packet
+	@param len the length of the ARP request
+	@param ip the ip of the interface
+	@param interface the interface on which the ARP request came
+*/
+void send_arp_reply(char *packet, size_t len, uint32_t ip, int interface);
+
+/*
+	@brief goes through the router's waiting line and sends the packets that waited
+		for an ARP reply with recv_ip's MAC address
+	@param interface the interface on which the ARP reply came
+	@param recv_ip the ip of the next hop for the waiting packets
+	@param recv_mac the MAC address of the recv_ip
+*/
+void send_waiting_packets(int interface, uint32_t recv_ip, uint8_t *recv_mac);
+
+/*
+	@brief build a ping reply from a ping request
+	@param packet the ping request packet -> will be modified into a reply
+	@param len the length of the packet
+*/
+void build_ping_reply(char *packet, int len);
+
+/*
+	@brief builds an icmp message from a received packet that encountered an error
+	@param packet the received packet -> headers are modified + an ICMP header is inserted
+	@param interface the interface on which the original packet came
+	@param len the length of the packet
+	@param ip the ip of the interface
+	@param error_type the error type to be inserted into the ICMP header
+*/
+void build_icmp_msg(char *packet, int interface, size_t *len, uint32_t ip, uint8_t error_type);
+
+/*
+	@brief gets the ip of the interface in uint32_t format
+*/
+uint32_t get_ip_from_interface(int interface);
+
+/*
+	@brief handles an IPv4 packet by sending it to the next hop;
+			also handles ping requests
+	@param packet the received packet
+	@param len the length of the packet
+	@param interface the interface on which the packet was received
+*/
 void handle_ipv4_packet(char *packet, size_t len, int interface);
+
+/*
+	@brief responds to ARP requests and sends packets on ARP replies
+	@param packet the received ARP packet
+	@param len the length of the packet
+	@interface the interface on which the packet was received
+*/
 void handle_arp_packet(char *packet, size_t len, int interface);
 
 
