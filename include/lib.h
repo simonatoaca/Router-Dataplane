@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "queue.h"
+#include "rt_trie.h"
 
 #define MAX_PACKET_LEN 1600
 #define ROUTER_NUM_INTERFACES 3
@@ -39,9 +40,8 @@ struct arp_entry {
 };
 
 struct router {
-	struct route_table_entry *rtable;
+	rt_trie_t *rt;
 	struct arp_entry *arp_table;
-	uint32_t rtable_len;
 	uint16_t arp_table_len;
 	queue waiting_list;
 };
@@ -88,7 +88,7 @@ int hwaddr_aton(const char *txt, uint8_t *addr);
  * e.g. rtable = malloc(sizeof(struct route_table_entry) * 80000);
  * This function returns the size of the route table.
  */
-int read_rtable(const char *path, struct route_table_entry *rtable);
+// int read_rtable(const char *path, struct route_table_entry *rtable);
 
 /* Parses a static mac table from path and populates arp_table.
  * arp_table should be allocated and have enough space. This

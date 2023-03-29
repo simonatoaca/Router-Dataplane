@@ -8,46 +8,68 @@
 #include "lib.h"
 #include "utils.h"
 #include "protocols.h"
+#include "rt_trie.h"
 
 extern struct router router;
 
+int load_rtable(const char *path, rt_trie_t *rt)
+{
+	FILE *fp = fopen(path, "r");
+	int j = 0, i;
+	char *p, line[64];
+
+	struct route_table_entry rtable;
+
+	while (fgets(line, sizeof(line), fp) != NULL) {
+		p = strtok(line, " .");
+		i = 0;
+		while (p != NULL) {
+			if (i < 4)
+				*(((unsigned char *)&rtable.prefix)  + i % 4) = (unsigned char)atoi(p);
+
+			if (i >= 4 && i < 8)
+				*(((unsigned char *)&rtable.next_hop)  + i % 4) = atoi(p);
+
+			if (i >= 8 && i < 12)
+				*(((unsigned char *)&rtable.mask)  + i % 4) = atoi(p);
+
+			if (i == 12)
+				rtable.interface = atoi(p);
+			p = strtok(NULL, " .");
+			i++;
+		}
+
+		trie_insert(rt, rtable.prefix, rtable.mask, &rtable);
+
+		j++;
+	}
+	return j;
+}
+
 int router_init(char *rtable)
 {
-	router.rtable = malloc(sizeof(struct route_table_entry) * 80000);
-	if (!router.rtable)
-		return -1;
+	router.rt = trie_create(sizeof(struct route_table_entry));
 	
 	router.arp_table = malloc(sizeof(struct arp_entry) * 100);
-	if (!router.rtable) {
-		free(router.rtable);
+	if (!router.arp_table) {
+		free(router.arp_table);
 		return -1;
 	}
 
 	router.waiting_list = queue_create();
 	if (!router.waiting_list) {
-		free(router.rtable);
 		free(router.arp_table);
 		return -1;
 	}
 	
-	/* Read the static routing table */
-	router.rtable_len = read_rtable(rtable, router.rtable);
+	/* Load the static routing table into the trie structure */
+	load_rtable(rtable, router.rt);
 
 	return 0;
 }
 
 struct route_table_entry *get_best_route(uint32_t ip_dest) {
-	struct route_table_entry *candidate = NULL;
-
-	for (int i = 0; i < router.rtable_len; i++) {
-		if ((router.rtable[i].prefix & router.rtable[i].mask) == (ip_dest & router.rtable[i].mask)) {
-			if (candidate == NULL || ntohl(router.rtable[i].mask) > ntohl(candidate->mask)) {
-				candidate = &router.rtable[i];
-			}
-		}
-	}
-
-	return candidate;
+	return trie_search(router.rt, ip_dest);
 }
 
 struct arp_entry *search_arp_entry(uint32_t given_ip) {

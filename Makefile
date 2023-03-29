@@ -1,10 +1,10 @@
 PROJECT=router
-SOURCES=router.c lib/queue.c lib/list.c lib/lib.c lib/utils.c lib/trie.c
+SOURCES=router.c lib/queue.c lib/list.c lib/lib.c lib/utils.c lib/rt_trie.c
 LIBRARY=nope
 INCPATHS=include
 LIBPATHS=.
 LDFLAGS=
-CFLAGS=-c -Wall -Werror -Wno-error=unused-variable
+CFLAGS=-g -c -Wall -Werror -Wno-error=unused-variable
 CC=gcc
 
 # Automatic generation of some important lists

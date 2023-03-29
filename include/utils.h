@@ -1,6 +1,7 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
+#include "lib.h"
 #include "protocols.h"
 
 #define ETHERTYPE_IP 0x0800

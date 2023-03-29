@@ -220,6 +220,7 @@ int read_rtable(const char *path, struct route_table_entry *rtable)
 			p = strtok(NULL, " .");
 			i++;
 		}
+
 		j++;
 	}
 	return j;
