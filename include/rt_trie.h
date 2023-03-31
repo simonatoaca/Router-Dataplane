@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
-#include "lib.h"
 
 #define BIT_VALUES 2
 #define GET_FIRST_BIT(ip) \

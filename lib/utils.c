@@ -43,6 +43,7 @@ int load_rtable(const char *path, rt_trie_t *rt)
 
 		j++;
 	}
+
 	return j;
 }
 
@@ -50,9 +51,8 @@ int router_init(char *rtable)
 {
 	router.rt = trie_create(sizeof(struct route_table_entry));
 	
-	router.arp_table = malloc(sizeof(struct arp_entry) * 100);
+	router.arp_table = malloc(sizeof(struct arp_entry) * ARP_TABLE_LEN);
 	if (!router.arp_table) {
-		free(router.arp_table);
 		return -1;
 	}
 
@@ -224,7 +224,7 @@ void build_icmp_msg(char *packet, int interface, size_t *len, uint32_t ip, uint8
 
 	/* Update len */
 	(*len) += sizeof(struct icmphdr);
-	ip_hdr->tot_len += sizeof(struct icmphdr);
+	ip_hdr->tot_len = htons(ntohs(ip_hdr->tot_len) + sizeof(struct icmphdr));
 
 	/* Change ICMP type to indicate the error */
 	icmp_hdr->type = error_type;

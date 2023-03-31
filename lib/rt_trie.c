@@ -1,4 +1,5 @@
 #include "rt_trie.h"
+#include "lib.h"
 
 trie_node_t *trie_create_node(rt_trie_t *trie) {
 	trie_node_t *node = malloc(sizeof(*node));
@@ -31,7 +32,8 @@ rt_trie_t *trie_create(int data_size) {
 	return trie;
 }
 
-void __trie_insert_helper(rt_trie_t *trie, trie_node_t *node, uint32_t key, uint32_t mask, void *value) {
+static void __trie_insert_helper(rt_trie_t *trie, trie_node_t *node,
+								 uint32_t key, uint32_t mask, void *value) {
 
 	if (!mask) {
 		if (node->end_of_word) {
@@ -65,7 +67,7 @@ void trie_insert(rt_trie_t* trie, uint32_t key, uint32_t mask, void* value) {
 	__trie_insert_helper(trie, trie->root, key, mask, value);
 }
 
-void *__trie_search_helper(trie_node_t *node, uint32_t key) {
+static void *__trie_search_helper(trie_node_t *node, uint32_t key) {
 
 	trie_node_t *next_node = node->children[GET_FIRST_BIT(key)];
 
@@ -83,5 +85,4 @@ void *trie_search(rt_trie_t* trie, uint32_t key) {
 	key = ntohl(key);
 
 	return __trie_search_helper(trie->root, key);
-
 }
